@@ -1,56 +1,88 @@
-[![License](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://gitlab.xfce.org/xfce/thunar/COPYING)
+# Thunar Pin-to-Top
 
-# thunar
+A modified version of [Thunar](https://gitlab.xfce.org/xfce/thunar) (Xfce's file manager) that adds a **Pin to Top** feature — pin any file or folder to always appear at the top of the file list.
 
+Based on **Thunar 4.20.8**.
 
-Thunar is a modern file manager for the Xfce Desktop Environment. Thunar has been designed from the ground up to be fast and easy to use. Its user interface is clean and intuitive and does not include any confusing or useless options by default. Thunar starts up quickly and navigating through files and folders is fast and responsive.
+## Screenshots
 
-----
+| Pin to Top in context menu | Pinned file at the top |
+|---|---|
+| ![Context Menu](screenshots/pin-menu.png) | ![Pin Result](screenshots/pin-result.png) |
 
-### Homepage
+## Features
 
-[Thunar documentation](https://docs.xfce.org/xfce/thunar/start)
+- Right-click any file or folder and select **Pin to Top**
+- Pinned items always appear at the top, regardless of sort order (name, date, size, etc.)
+- Pinned files can appear above folders
+- Pin emblem overlay on pinned items
+- Multiple items can be pinned; they are ordered by pin time
+- Pin state persists across sessions (stored via GIO metadata)
+- Unpin via right-click **Unpin from Top**
 
-### Changelog
+## How it works
 
-See [NEWS](https://gitlab.xfce.org/xfce/thunar/-/blob/master/NEWS) for details on changes and fixes made in the current release.
+- Pin state is stored as GIO metadata (`metadata::thunar-pinned`, `metadata::thunar-pin-order`) in `~/.local/share/gvfs-metadata/`
+- No extra database or config files needed
+- Sort priority: **Pinned items > Folders first > Normal sort**
 
-### Source Code Repository
+## Installation (Arch Linux)
 
-[Thunar source code](https://gitlab.xfce.org/xfce/thunar)
+### Build from source
 
-### Download a Release Tarball
+```bash
+# Install build dependencies
+sudo pacman -S --needed base-devel xfce4-dev-tools intltool glib2-devel \
+    gtk3 exo libxfce4ui libxfce4util gobject-introspection
 
-[Thunar archive](https://archive.xfce.org/src/xfce/thunar)
-    or
-[Thunar tags](https://gitlab.xfce.org/xfce/thunar/-/tags)
+# Clone this repo
+git clone https://github.com/123hi123/thunar-pin.git
+cd thunar-pin
+git checkout pin-feature
 
-### Installation
+# Build (use -j2 to limit CPU usage)
+./autogen.sh --prefix=/usr --sysconfdir=/etc
+make -j2
 
-From source: 
+# Install (replaces system Thunar)
+sudo make install
 
-    % git clone https://gitlab.xfce.org/xfce/thunar
-    % git checkout <branch|tag>  #optional step. Per default master is checked out
-    % cd thunar
-    % ./autogen.sh
-    % make
-    # make install
+# Install pin emblem icon
+sudo mkdir -p /usr/share/icons/hicolor/scalable/emblems
+sudo cp icons/emblem-pinned.svg /usr/share/icons/hicolor/scalable/emblems/
+sudo gtk-update-icon-cache -f -t /usr/share/icons/hicolor
 
-From release tarball:
+# Restart Thunar
+thunar -q && thunar &
+```
 
-    % tar xf thunar-<version>.tar.bz2
-    % cd thunar-<version>
-    % ./configure
-    % make
-    # make install
+### Uninstall (restore original Thunar)
 
- Both autogen.sh and configure will list missing dependencies. 
- If your distribution provides development versions of the related packages, 
- install them. Otherwise you will need to build and install the missing dependencies from source.
+```bash
+sudo pacman -S thunar
+```
 
-For additional build & debug hints, check the [Thunar wiki pages](https://wiki.xfce.org/thunar/dev) and the [detailed building wiki manual](https://docs.xfce.org/xfce/building).
+## Changed files
 
-### Reporting Bugs
+```
+thunar/thunar-file.c              # Pin API: is_pinned(), set_pinned(), get_pin_order()
+thunar/thunar-file.h              # Pin function declarations + emblem constant
+thunar/thunar-list-model.c        # Pin sort logic for icon/compact view
+thunar/thunar-tree-view-model.c   # Pin sort logic for details view
+thunar/thunar-action-manager.c    # Pin/Unpin context menu action
+thunar/thunar-action-manager.h    # Action enum entry
+thunar/thunar-menu.c              # Pin section at top of context menu
+thunar/thunar-menu.h              # Menu section flag
+thunar/thunar-standard-view.c     # Include pin section in context menu
+thunarx/thunarx-file-info.h       # Query pin metadata attributes
+icons/emblem-pinned.svg           # Pin emblem icon
+```
 
-Visit the [reporting bugs](https://docs.xfce.org/xfce/thunar/bugs) page to view currently open bug reports and instructions on reporting new bugs or submitting bugfixes.
+## License
 
+GPL-2.0 (same as Thunar)
+
+## Credits
+
+- [Thunar](https://gitlab.xfce.org/xfce/thunar) by the Xfce development team
+- Pin feature developed with [Claude Code](https://claude.ai/claude-code)
