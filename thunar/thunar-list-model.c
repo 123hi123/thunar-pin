@@ -1379,6 +1379,20 @@ thunar_list_model_cmp_func (gconstpointer a,
   _thunar_return_val_if_fail (THUNAR_IS_FILE (a), 0);
   _thunar_return_val_if_fail (THUNAR_IS_FILE (b), 0);
 
+  {
+    gboolean pinned_a = thunar_file_is_pinned ((ThunarFile *) a);
+    gboolean pinned_b = thunar_file_is_pinned ((ThunarFile *) b);
+    if (pinned_a != pinned_b)
+      return pinned_a ? -1 : 1;
+    if (pinned_a && pinned_b)
+      {
+        gint64 order_a = thunar_file_get_pin_order ((ThunarFile *) a);
+        gint64 order_b = thunar_file_get_pin_order ((ThunarFile *) b);
+        if (order_a != order_b)
+          return order_a < order_b ? -1 : 1;
+      }
+  }
+
   if (G_LIKELY (store->sort_folders_first))
     {
       isdir_a = thunar_file_is_directory (a);
@@ -1504,7 +1518,6 @@ thunar_list_model_files_changed (ThunarFolder    *folder,
       /* check if the sorting changed */
       g_sequence_sort_changed (row, thunar_list_model_cmp_func, store);
       pos_after = g_sequence_iter_get_position (row);
-
       /* if 'g_sequence_sort_changed' changed the sorting, the positions will differ now */
       if (pos_after != pos_before)
         {

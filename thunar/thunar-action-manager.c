@@ -255,6 +255,8 @@ thunar_action_manager_create_document_submenu_new (ThunarActionManager *action_m
 static void
 thunar_action_manager_new_files_created (ThunarActionManager *action_mgr,
                                          GList               *new_thunar_files);
+static gboolean
+thunar_action_manager_action_toggle_pin (ThunarActionManager *action_mgr);
 
 
 
@@ -361,6 +363,7 @@ static XfceGtkActionEntry thunar_action_manager_action_entries[] =
     { THUNAR_ACTION_MANAGER_ACTION_MOUNT,            NULL,                                                   "",                  XFCE_GTK_MENU_ITEM,       N_ ("_Mount"),                          N_ ("Mount the selected device"),                                                                NULL,                   G_CALLBACK (thunar_action_manager_action_mount),               },
     { THUNAR_ACTION_MANAGER_ACTION_UNMOUNT,          NULL,                                                   "",                  XFCE_GTK_MENU_ITEM,       N_ ("_Unmount"),                        N_ ("Unmount the selected device"),                                                              NULL,                   G_CALLBACK (thunar_action_manager_action_unmount),             },
     { THUNAR_ACTION_MANAGER_ACTION_EJECT,            NULL,                                                   "",                  XFCE_GTK_MENU_ITEM,       N_ ("_Eject"),                          N_ ("Eject the selected device"),                                                                NULL,                   G_CALLBACK (thunar_action_manager_action_eject),               },
+    { THUNAR_ACTION_MANAGER_ACTION_TOGGLE_PIN,      "<Actions>/ThunarActionManager/toggle-pin",             "",                  XFCE_GTK_IMAGE_MENU_ITEM, N_ ("_Pin to Top"),                     N_ ("Pin the selected items to the top of the file list"),                                       "view-pin",             G_CALLBACK (thunar_action_manager_action_toggle_pin),          },
 };
 /* clang-format on */
 
@@ -1962,6 +1965,22 @@ thunar_action_manager_append_menu_item (ThunarActionManager      *action_mgr,
         gtk_widget_set_sensitive (item, thunar_device_is_mounted (action_mgr->device_to_process));
       return item;
 
+    case THUNAR_ACTION_MANAGER_ACTION_TOGGLE_PIN:
+      if (action_mgr->files_to_process == NULL)
+        return NULL;
+      {
+        ThunarFile *first_file = g_list_first (action_mgr->files_to_process)->data;
+        gboolean    is_pinned  = thunar_file_is_pinned (first_file);
+        XfceGtkActionEntry pin_entry = *action_entry;
+        if (is_pinned)
+          {
+            pin_entry.menu_item_label_text = N_ ("_Unpin from Top");
+            pin_entry.menu_item_tooltip_text = N_ ("Unpin the selected items from the top of the file list");
+          }
+        item = xfce_gtk_menu_item_new_from_action_entry (&pin_entry, G_OBJECT (action_mgr), GTK_MENU_SHELL (menu));
+      }
+      return item;
+
     default:
       return xfce_gtk_menu_item_new_from_action_entry (action_entry, G_OBJECT (action_mgr), GTK_MENU_SHELL (menu));
     }
@@ -2303,6 +2322,27 @@ thunar_action_manager_action_properties (ThunarActionManager *action_mgr)
     }
 
   /* required in case of shortcut activation, in order to signal that the accel key got handled */
+  return TRUE;
+}
+
+
+
+static gboolean
+thunar_action_manager_action_toggle_pin (ThunarActionManager *action_mgr)
+{
+  GList *lp;
+
+  _thunar_return_val_if_fail (THUNAR_IS_ACTION_MANAGER (action_mgr), FALSE);
+
+  if (action_mgr->files_to_process == NULL)
+    return TRUE;
+
+  /* determine current pin state from first file */
+  gboolean is_pinned = thunar_file_is_pinned (g_list_first (action_mgr->files_to_process)->data);
+
+  for (lp = action_mgr->files_to_process; lp != NULL; lp = lp->next)
+    thunar_file_set_pinned (lp->data, !is_pinned);
+
   return TRUE;
 }
 

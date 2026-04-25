@@ -116,6 +116,7 @@ typedef enum
 #define THUNAR_FILE_EMBLEM_NAME_CANT_READ "emblem-noread"
 #define THUNAR_FILE_EMBLEM_NAME_CANT_WRITE "emblem-nowrite"
 #define THUNAR_FILE_EMBLEM_NAME_DESKTOP "emblem-desktop"
+#define THUNAR_FILE_EMBLEM_NAME_PINNED "emblem-pinned"
 
 #define DEFAULT_CONTENT_TYPE "application/octet-stream"
 
@@ -411,6 +412,14 @@ void
 thunar_file_clear_directory_specific_settings (ThunarFile *file);
 gboolean
 thunar_file_has_directory_specific_settings (ThunarFile *file);
+
+gboolean
+thunar_file_is_pinned (ThunarFile *file);
+gint64
+thunar_file_get_pin_order (ThunarFile *file);
+void
+thunar_file_set_pinned (ThunarFile *file,
+                        gboolean    pinned);
 
 void
 thunar_file_move_thumbnail_cache_file (GFile *old_file,

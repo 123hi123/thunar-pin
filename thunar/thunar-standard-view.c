@@ -4175,6 +4175,7 @@ thunar_standard_view_context_menu (ThunarStandardView *standard_view)
                                               | THUNAR_MENU_SECTION_RESTORE
                                               | THUNAR_MENU_SECTION_REMOVE_FROM_RECENT
                                               | THUNAR_MENU_SECTION_CUSTOM_ACTIONS
+                                              | THUNAR_MENU_SECTION_PIN
                                               | THUNAR_MENU_SECTION_PROPERTIES);
     }
   else /* right click on some empty space */

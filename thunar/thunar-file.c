@@ -3759,6 +3759,9 @@ thunar_file_get_emblem_names (ThunarFile *file)
       g_strfreev (emblem_names);
     }
 
+  if (thunar_file_is_pinned (file))
+    emblems = g_list_prepend (emblems, g_strdup (THUNAR_FILE_EMBLEM_NAME_PINNED));
+
   if (thunar_file_is_symlink (file))
     emblems = g_list_prepend (emblems, g_strdup (THUNAR_FILE_EMBLEM_NAME_SYMBOLIC_LINK));
 
@@ -4956,6 +4959,76 @@ thunar_file_has_directory_specific_settings (ThunarFile *file)
     return TRUE;
 
   return FALSE;
+}
+
+
+
+gboolean
+thunar_file_is_pinned (ThunarFile *file)
+{
+  gchar *value;
+
+  _thunar_return_val_if_fail (THUNAR_IS_FILE (file), FALSE);
+
+  if (file->info == NULL)
+    return FALSE;
+
+  value = thunar_g_file_get_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pinned");
+  if (value != NULL)
+    {
+      gboolean pinned = (g_strcmp0 (value, "true") == 0);
+      g_free (value);
+      return pinned;
+    }
+
+  return FALSE;
+}
+
+
+
+gint64
+thunar_file_get_pin_order (ThunarFile *file)
+{
+  gchar *value;
+
+  _thunar_return_val_if_fail (THUNAR_IS_FILE (file), G_MAXINT64);
+
+  if (file->info == NULL)
+    return G_MAXINT64;
+
+  value = thunar_g_file_get_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pin-order");
+  if (value != NULL)
+    {
+      gint64 order = g_ascii_strtoll (value, NULL, 10);
+      g_free (value);
+      return order;
+    }
+
+  return G_MAXINT64;
+}
+
+
+
+void
+thunar_file_set_pinned (ThunarFile *file,
+                        gboolean    pinned)
+{
+  _thunar_return_if_fail (THUNAR_IS_FILE (file));
+
+  if (pinned)
+    {
+      gchar order_str[32];
+      g_snprintf (order_str, sizeof (order_str), "%" G_GINT64_FORMAT, g_get_real_time ());
+      thunar_g_file_set_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pinned", "true", FALSE);
+      thunar_g_file_set_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pin-order", order_str, FALSE);
+    }
+  else
+    {
+      thunar_g_file_set_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pinned", NULL, FALSE);
+      thunar_g_file_set_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pin-order", NULL, FALSE);
+    }
+
+  thunar_file_reload (file);
 }
 
 
