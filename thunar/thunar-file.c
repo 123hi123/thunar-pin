@@ -5024,8 +5024,14 @@ thunar_file_set_pinned (ThunarFile *file,
     }
   else
     {
-      thunar_g_file_set_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pinned", NULL, FALSE);
-      thunar_g_file_set_metadata_setting (file->gfile, file->info, THUNAR_GTYPE_STRING, "thunar-pin-order", NULL, FALSE);
+      g_file_info_remove_attribute (file->info, "metadata::thunar-pinned");
+      g_file_info_remove_attribute (file->info, "metadata::thunar-pin-order");
+      g_file_set_attribute (file->gfile, "metadata::thunar-pinned",
+                            G_FILE_ATTRIBUTE_TYPE_INVALID, NULL,
+                            G_FILE_QUERY_INFO_NONE, NULL, NULL);
+      g_file_set_attribute (file->gfile, "metadata::thunar-pin-order",
+                            G_FILE_ATTRIBUTE_TYPE_INVALID, NULL,
+                            G_FILE_QUERY_INFO_NONE, NULL, NULL);
     }
 
   thunar_file_reload (file);

@@ -257,6 +257,8 @@ thunar_action_manager_new_files_created (ThunarActionManager *action_mgr,
                                          GList               *new_thunar_files);
 static gboolean
 thunar_action_manager_action_toggle_pin (ThunarActionManager *action_mgr);
+static gboolean
+thunar_action_manager_action_pin_move_first (ThunarActionManager *action_mgr);
 
 
 
@@ -364,6 +366,7 @@ static XfceGtkActionEntry thunar_action_manager_action_entries[] =
     { THUNAR_ACTION_MANAGER_ACTION_UNMOUNT,          NULL,                                                   "",                  XFCE_GTK_MENU_ITEM,       N_ ("_Unmount"),                        N_ ("Unmount the selected device"),                                                              NULL,                   G_CALLBACK (thunar_action_manager_action_unmount),             },
     { THUNAR_ACTION_MANAGER_ACTION_EJECT,            NULL,                                                   "",                  XFCE_GTK_MENU_ITEM,       N_ ("_Eject"),                          N_ ("Eject the selected device"),                                                                NULL,                   G_CALLBACK (thunar_action_manager_action_eject),               },
     { THUNAR_ACTION_MANAGER_ACTION_TOGGLE_PIN,      "<Actions>/ThunarActionManager/toggle-pin",             "",                  XFCE_GTK_IMAGE_MENU_ITEM, N_ ("_Pin to Top"),                     N_ ("Pin the selected items to the top of the file list"),                                       "view-pin",             G_CALLBACK (thunar_action_manager_action_toggle_pin),          },
+    { THUNAR_ACTION_MANAGER_ACTION_PIN_MOVE_FIRST, "<Actions>/ThunarActionManager/pin-move-first",         "",                  XFCE_GTK_MENU_ITEM,       N_ ("Move to _First Pin"),              N_ ("Move the selected pinned item to the first position"),                                      NULL,                   G_CALLBACK (thunar_action_manager_action_pin_move_first),      },
 };
 /* clang-format on */
 
@@ -1981,6 +1984,13 @@ thunar_action_manager_append_menu_item (ThunarActionManager      *action_mgr,
       }
       return item;
 
+    case THUNAR_ACTION_MANAGER_ACTION_PIN_MOVE_FIRST:
+      if (action_mgr->files_to_process == NULL)
+        return NULL;
+      if (!thunar_file_is_pinned (g_list_first (action_mgr->files_to_process)->data))
+        return NULL;
+      return xfce_gtk_menu_item_new_from_action_entry (action_entry, G_OBJECT (action_mgr), GTK_MENU_SHELL (menu));
+
     default:
       return xfce_gtk_menu_item_new_from_action_entry (action_entry, G_OBJECT (action_mgr), GTK_MENU_SHELL (menu));
     }
@@ -2342,6 +2352,60 @@ thunar_action_manager_action_toggle_pin (ThunarActionManager *action_mgr)
 
   for (lp = action_mgr->files_to_process; lp != NULL; lp = lp->next)
     thunar_file_set_pinned (lp->data, !is_pinned);
+
+  return TRUE;
+}
+
+
+
+static gboolean
+thunar_action_manager_action_pin_move_first (ThunarActionManager *action_mgr)
+{
+  _thunar_return_val_if_fail (THUNAR_IS_ACTION_MANAGER (action_mgr), FALSE);
+
+  if (action_mgr->files_to_process == NULL || action_mgr->current_directory == NULL)
+    return TRUE;
+
+  ThunarFolder *folder = thunar_folder_get_for_file (action_mgr->current_directory);
+  if (folder == NULL)
+    return TRUE;
+
+  /* find the minimum pin-order among all pinned files */
+  gint64      min_order = G_MAXINT64;
+  GHashTable *files_map = thunar_folder_get_files (folder);
+  if (files_map != NULL)
+    {
+      GHashTableIter iter;
+      gpointer       key;
+      g_hash_table_iter_init (&iter, files_map);
+      while (g_hash_table_iter_next (&iter, &key, NULL))
+        {
+          ThunarFile *f = THUNAR_FILE (key);
+          if (thunar_file_is_pinned (f))
+            {
+              gint64 order = thunar_file_get_pin_order (f);
+              if (order < min_order)
+                min_order = order;
+            }
+        }
+    }
+  g_object_unref (folder);
+
+  /* set selected files' pin-order to min - 1 */
+  for (GList *lp = action_mgr->files_to_process; lp != NULL; lp = lp->next)
+    {
+      ThunarFile *file = lp->data;
+      if (thunar_file_is_pinned (file))
+        {
+          gchar order_str[32];
+          g_snprintf (order_str, sizeof (order_str), "%" G_GINT64_FORMAT, min_order - 1);
+          thunar_g_file_set_metadata_setting (thunar_file_get_file (file),
+                                              thunar_file_get_info (file),
+                                              THUNAR_GTYPE_STRING, "thunar-pin-order", order_str, FALSE);
+          min_order--;
+          thunar_file_reload (file);
+        }
+    }
 
   return TRUE;
 }

@@ -256,7 +256,10 @@ thunar_menu_add_sections (ThunarMenu        *menu,
 
   if (menu_sections & THUNAR_MENU_SECTION_PIN)
     {
-      if (thunar_action_manager_append_menu_item (menu->action_mgr, GTK_MENU_SHELL (menu), THUNAR_ACTION_MANAGER_ACTION_TOGGLE_PIN, FALSE) != NULL)
+      item_added = FALSE;
+      item_added |= (thunar_action_manager_append_menu_item (menu->action_mgr, GTK_MENU_SHELL (menu), THUNAR_ACTION_MANAGER_ACTION_TOGGLE_PIN, FALSE) != NULL);
+      item_added |= (thunar_action_manager_append_menu_item (menu->action_mgr, GTK_MENU_SHELL (menu), THUNAR_ACTION_MANAGER_ACTION_PIN_MOVE_FIRST, FALSE) != NULL);
+      if (item_added)
         xfce_gtk_menu_append_separator (GTK_MENU_SHELL (menu));
     }
 
